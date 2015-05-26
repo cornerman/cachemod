@@ -9,13 +9,17 @@ function CacheModel() {
     this.setCache = setCache;
 
     var cacheServiceName;
-    var store = {};
     var defaultCache = {
-        put: function(k,v) {
-            store[k] = v;
-        },
-        get: function(k) {
-            return store[k];
+        get: function() {
+            var store = {};
+            return {
+                put: function(k, v) {
+                    store[k] = v;
+                },
+                get: function(k) {
+                    return store[k];
+                }
+            };
         }
     };
 
@@ -24,33 +28,40 @@ function CacheModel() {
     }
 
     get.$inject = ["restmod", "$injector"];
+
     function get(restmod, $injector) {
         var cacheService = cacheServiceName ? $injector.get(cacheServiceName) : defaultCache;
 
-        return {
-            $extend: {
-                Model: {
-                    "$find": function(_pk) {
-                        var url = this.$url() + "/" + _pk;
-                        return cachedResponse.bind(this)(url, arguments);
-                    }
-                },
-                Collection: {
-                    "$fetch": function() {
-                        return cachedResponse.bind(this)(this.$url(), arguments);
-                    }
+        return restmod.mixin(function() {
+            var cache = cacheService.get();
+
+            this.define("Model.$new", function(_key, _scope) {
+                return cachedResponse.apply(this, [_key, arguments]);
+            }).define("Collection.$fetch", function() {
+                return cachedResponse.apply(this, [this.$url(), arguments]);
+            }).define("Record.$fetch", function() {
+                //TODO: only cache singletons?
+                return cachedResponse.apply(this, [this.$url(), arguments]);
+            });
+
+            this.define("Record.$decode", function() {
+                var result = this.$super.apply(this, arguments);
+                cache.put(result.$pk || this.$url(), this);
+                return result;
+            });
+
+            function cachedResponse(key, args) {
+                if (key === undefined)
+                    return this.$super.apply(this, args);
+
+                var cached = cache.get(key);
+                if (cached === undefined) {
+                    cached = this.$super.apply(this, args);
+                    cache.put(key, cached);
                 }
-            }
-        };
 
-        function cachedResponse(url, args) {
-            var cached = cacheService.get(url);
-            if (cached === undefined) {
-                cached = this.$super.apply(this, args);
-                cacheService.put(url, cached);
+                return cached;
             }
-
-            return cached;
-        }
+        });
     }
 }
