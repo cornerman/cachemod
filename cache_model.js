@@ -8,11 +8,15 @@ function CacheModel() {
     this.$get = get;
     this.setCache = setCache;
 
-    let cacheServiceName;
-    let store = {};
-    let defaultCache = {
-        set: (k,v) => store[k] = v,
-        get: _.propertyOf(store)
+    var cacheServiceName;
+    var store = {};
+    var defaultCache = {
+        set: function(k,v) {
+            store[k] = v;
+        },
+        get: function(k) {
+            return store[k];
+        }
     };
 
     function setCache(serviceName) {
@@ -21,13 +25,13 @@ function CacheModel() {
 
     get.$inject = ["restmod", "$injector"];
     function get(restmod, $injector) {
-        let cacheService = cacheServiceName ? $injector.get(cacheServiceName) : defaultCache;
+        var cacheService = cacheServiceName ? $injector.get(cacheServiceName) : defaultCache;
 
         return {
             $extend: {
                 Model: {
                     "$find": function(_pk) {
-                        let url = `${this.$url()}/${_pk}`;
+                        var url = this.$url() + "/" + _pk;
                         return cachedResponse.bind(this)(url, arguments);
                     }
                 },
@@ -40,7 +44,7 @@ function CacheModel() {
         };
 
         function cachedResponse(url, args) {
-            let cached = cacheService.get(url);
+            var cached = cacheService.get(url);
             if (cached === undefined) {
                 cached = this.$super.apply(this, args);
                 cacheService.set(url, cached);
