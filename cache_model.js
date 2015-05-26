@@ -11,7 +11,7 @@ function CacheModel() {
     var cacheServiceName;
     var store = {};
     var defaultCache = {
-        set: function(k,v) {
+        put: function(k,v) {
             store[k] = v;
         },
         get: function(k) {
@@ -47,7 +47,7 @@ function CacheModel() {
             var cached = cacheService.get(url);
             if (cached === undefined) {
                 cached = this.$super.apply(this, args);
-                cacheService.set(url, cached);
+                cacheService.put(url, cached);
             }
 
             return cached;
