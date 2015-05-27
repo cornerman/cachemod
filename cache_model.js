@@ -40,11 +40,13 @@ function CacheModel() {
             }).define("Collection.$fetch", function() {
                 return cachedResponse.apply(this, [this.$url(), arguments]);
             }).define("Record.$fetch", function() {
-                //TODO: only cache singletons?
-                return cachedResponse.apply(this, [this.$url(), arguments]);
-            });
+                //TODO: properly distinguish between singletons and instances?
+                if (this.$pk === "") {
+                    return cachedResponse.apply(this, [this.$url(), arguments]);
+                }
 
-            this.define("Record.$decode", function() {
+                return this.$super.apply(this, arguments);
+            }).define("Record.$decode", function() {
                 var result = this.$super.apply(this, arguments);
                 cache.put(result.$pk || this.$url(), this);
                 return result;
